@@ -195,19 +195,19 @@ func ProcessArg(cmd *cobra.Command, args []string) (*Config, *cmd.License, strin
 		licenseName = l
 	}
 
-	var license ccmd.License
+	var license *ccmd.License
 	if licenseName == "custom" {
 
 	} else {
-		var exist bool
-		license, exist = OSSLicenses[licenseName]
+		li, exist := OSSLicenses[licenseName]
 		if !exist {
 			err := fmt.Errorf("OSSLicenses not hit")
 			cmd.Println(err)
 			cmd.Println("liquid automatically choose mit")
 			licenseName = "mit"
-			license, _ = OSSLicenses[licenseName]
+			li, _ = OSSLicenses[licenseName]
 		}
+		license = &li
 
 	}
 	a, err := cmd.Flags().GetString("author")
@@ -217,7 +217,7 @@ func ProcessArg(cmd *cobra.Command, args []string) (*Config, *cmd.License, strin
 
 	config.License["last"] = licenseName
 	config.Author["last"] = getAuthor(a, config)
-	return config, &license, config.Author["last"]
+	return config, license, config.Author["last"]
 }
 
 func getAuthor(a string, c *Config) string {
