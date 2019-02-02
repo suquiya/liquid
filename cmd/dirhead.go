@@ -21,24 +21,38 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
-	"github.com/spf13/cobra/cobra/cmd"
 )
 
-// newCmd represents the new command
-func newAddCmd() *cobra.Command {
-	addCmd := &cobra.Command{
-		Use:   "newfile",
-		Short: "create newfile of source code",
-		Long:  `This command create new file of source code using specified license`,
-		Run: func(cmd *cobra.Command, args []string) {
+// haCmd represents the ha command
+var headCmd = &cobra.Command{
+	Use:   "head",
+	Short: "A brief description of your command",
+	Long: `A longer description that spans multiple lines and likely contains examples
+and usage of using your command. For example:
 
-		},
-	}
-
-	return addCmd
+Cobra is a CLI library for Go that empowers applications.
+This application is a tool to generate the needed files
+to quickly create a Cobra application.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("ha called")
+	},
 }
 
-func createNew(dir, fn string, l *cmd.License, author string) {
+/*
+func init() {
+	rootCmd.AddCommand(haCmd)
 
+	// Here you will define your flags and configuration settings.
+
+	// Cobra supports Persistent Flags which will work for this command
+	// and all subcommands, e.g.:
+	// haCmd.PersistentFlags().String("foo", "", "A help for foo")
+
+	// Cobra supports local flags which will only run when this command
+	// is called directly, e.g.:
+	// haCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
+*/

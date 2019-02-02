@@ -22,6 +22,9 @@
 package cmd
 
 import (
+	"fmt"
+	"io/ioutil"
+
 	"github.com/spf13/cobra/cobra/cmd"
 )
 
@@ -30,4 +33,38 @@ var OSSLicenses map[string]cmd.License
 
 func init() {
 	OSSLicenses = cmd.Licenses
+}
+
+//CreateCustomLicense create License struct from file
+func CreateCustomLicense(headPath, textPath string) (*cmd.License, error) {
+	h := headPath
+	t := textPath
+	e, err := IsExistFilePath(h)
+	e2, err2 := IsExistFilePath(t)
+
+	if e {
+		if e2 {
+			return &cmd.License{Name: "custom", Header: readFile(h), Text: readFile(t)}, nil
+		}
+		fmt.Println(err2)
+		h = t
+		hStr := readFile(h)
+		return &cmd.License{Name: "custom", Header: hStr, Text: hStr}, nil
+	}
+	if e2 {
+		t = h
+		tStr := readFile(t)
+		return &cmd.License{Name: "custom", Header: tStr, Text: tStr}, nil
+	}
+
+	return nil, fmt.Errorf("%s\r\n%s", err.Error(), err2.Error())
+
+}
+
+func readFile(path string) string {
+	b, err := ioutil.ReadFile(path)
+	if err != nil {
+		panic(err)
+	}
+	return string(b)
 }

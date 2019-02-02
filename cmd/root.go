@@ -32,6 +32,8 @@ import (
 	homedir "github.com/mitchellh/go-homedir"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/cobra/cobra/cmd"
+	ccmd "github.com/spf13/cobra/cobra/cmd"
 )
 
 //Config storage config
@@ -91,6 +93,8 @@ func NewConfig() *Config {
 func (c *Config) SetDefValue() {
 	c.License["last"] = "mit"
 	c.License["fix"] = ""
+	c.License["customHeaderFile"] = ""
+	c.License["customTextFile"] = ""
 	c.Author["last"] = "COPYRIGHT HOLDER"
 	c.Author["fix"] = ""
 }
@@ -103,13 +107,21 @@ func (c *Config) GetLicenseValue() string {
 	return c.License["last"]
 }
 
+//GetAuthorValue get auther value
+func (c *Config) GetAuthorValue() string {
+	if c.Author["fix"] != "" {
+		return c.License["fix"]
+	}
+	return c.License["last"]
+}
+
 func getDefaultConfigPath() string {
 	home, err := homedir.Dir()
 	if err != nil {
 		fmt.Println(err)
 		return ""
 	}
-	return filepath.Join(home, ".suquiya_liquid.json")
+	return filepath.Join(home, ".config_liquid.json")
 }
 
 // rootCmd represents the base command when called without any subcommands
@@ -118,26 +130,37 @@ func newRootCmd() *cobra.Command {
 	var rootCmd = &cobra.Command{
 		Use:   "liquid",
 		Short: "liquid is utility for license management in golang.",
-		Long: `liquid is utility for license management in golang. liquid can add LICENSE to top of source code, and replace its LICENSE to another LICENSE
+		Long: `liquid is utility for license management in golang. liquid can add LICENSE to top of source code, and replace its LICENSE to another LICENSE.
 		`,
 		// Uncomment the following line if your bare application
 		// has an action associated with it:
-		//	Run: func(cmd *cobra.Command, args []string) { },
-		RunE: Process,
+		Run: func(cmd *cobra.Command, args []string) {
+			c, err := cmd.Flags().GetBool("customLicense")
+
+			if err != nil {
+				panic(err)
+			}
+
+			if c {
+				fmt.Println("空っぽ")
+			}
+		},
+		//RunE: Process,
 	}
 
 	rootCmd.AddCommand(newAddCmd())
 
 	rootCmd.Flags().StringP("license", "l", "mit", "name of license (first default is mit, and after first use, config record what user choose and set it default)")
 	rootCmd.Flags().StringP("author", "a", "COPYRIGHT HOLDER", "author(copyright holder) name for copyright (default is COPYTIGHT HOLDER)")
-	rootCmd.Flags().StringP("customLicense", "c", "", "custom license path in the case that use custom license")
-	rootCmd.Flags().String("config", "", "config file")
-
+	rootCmd.Flags().BoolP("customLicense", "c", false, "cust")
+	rootCmd.Flags().String("config", "", "config file. Default is "+getDefaultConfigPath())
+	rootCmd.Flags().String("Header", "", "file path of custom license header")
+	rootCmd.Flags().String("Text", "", "file path of custom license text")
 	return rootCmd
 }
 
-//Process is function of inner commandline-tools
-func Process(cmd *cobra.Command, args []string) error {
+//ProcessArg process args to get license,author and config data from arg and config file.
+func ProcessArg(cmd *cobra.Command, args []string) (*Config, *cmd.License, string) {
 	configPath, err := cmd.Flags().GetString("config")
 	if err != nil {
 		panic(err)
@@ -157,12 +180,51 @@ func Process(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		panic(err)
 	}
-	license := ""
-	if l == "" {
+	c, err := cmd.Flags().GetBool("customLicense")
 
+	if err != nil {
+		panic(err)
 	}
 
-	return nil
+	licenseName := ""
+	if c {
+		licenseName = "custom"
+	} else if l == "" {
+		licenseName = config.GetLicenseValue()
+	} else {
+		licenseName = l
+	}
+
+	var license ccmd.License
+	if licenseName == "custom" {
+
+	} else {
+		var exist bool
+		license, exist = OSSLicenses[licenseName]
+		if !exist {
+			err := fmt.Errorf("OSSLicenses not hit")
+			cmd.Println(err)
+			cmd.Println("liquid automatically choose mit")
+			licenseName = "mit"
+			license, _ = OSSLicenses[licenseName]
+		}
+
+	}
+	a, err := cmd.Flags().GetString("author")
+	if err != nil {
+		panic(err)
+	}
+
+	config.License["last"] = licenseName
+	config.Author["last"] = getAuthor(a, config)
+	return config, &license, config.Author["last"]
+}
+
+func getAuthor(a string, c *Config) string {
+	if a == "COPYRIGHT HOLDER" {
+		return c.GetAuthorValue()
+	}
+	return a
 }
 
 //IsExistFilePath is validate whether val is exist filepath or not.
@@ -172,7 +234,7 @@ func IsExistFilePath(val string) (bool, error) {
 		return false, err
 	}
 	if is, _ := govalidator.IsFilePath(absPath); !is {
-		return is, fmt.Errorf("IsNotFilePath")
+		return is, fmt.Errorf("%s is not file path", val)
 	}
 
 	fi, err := os.Stat(val)
