@@ -23,6 +23,7 @@ package cmd
 import (
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
@@ -76,7 +77,23 @@ func createNew(fn string, l *cmd.License, author, packageName string, messageWri
 			pn = filepath.Base(dir)
 		}
 
+		if !isExistDir(dir) {
+			err := os.MkdirAll(fp, 0755)
+		}
+
 	} else {
 		fmt.Println(err)
 	}
+}
+
+func isExistDir(dir string) bool {
+	_, err := os.Stat(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
+		return false
+	}
+
+	return true
 }
