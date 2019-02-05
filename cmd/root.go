@@ -145,7 +145,7 @@ func newRootCmd() *cobra.Command {
 	rootCmd.AddCommand(newAddCmd())
 	rootCmd.AddCommand(newHeadCmd())
 
-	rootCmd.PersistentFlags().StringP("license", "l", "mit", "name of license (first default is mit, and after first use, config record what user choose and set it default)")
+	rootCmd.PersistentFlags().StringP("license", "l", "mit", "name of license (first default is mit or license that is detected from directory's LICENSE file. And after first use, config record what user choose and set it as \"mit\" position in default)")
 	rootCmd.PersistentFlags().StringP("author", "a", "COPYRIGHT HOLDER", "author(copyright holder) name for copyright (default is COPYTIGHT HOLDER)")
 	rootCmd.PersistentFlags().BoolP("customLicense", "c", false, "Ir use custom license, turn on this flag.")
 	rootCmd.PersistentFlags().String("config", "", "config file. Default is "+getDefaultConfigPath())
@@ -155,7 +155,7 @@ func newRootCmd() *cobra.Command {
 }
 
 //ProcessArg process args to get license,author and config data from arg and config file.
-func ProcessArg(cmd *cobra.Command, args []string) (*Config, *cmd.License, string) {
+func ProcessArg(cmd *cobra.Command, args []string) (*Config, *cmd.License, string, bool) {
 	configPath, err := cmd.Flags().GetString("config")
 	if err != nil {
 		panic(err)
@@ -182,10 +182,11 @@ func ProcessArg(cmd *cobra.Command, args []string) (*Config, *cmd.License, strin
 	}
 
 	licenseName := ""
+	licenseIsNotSet := false
 	if c {
 		licenseName = "custom"
 	} else {
-		licenseName = getLicenseName(l, config)
+		licenseName, licenseIsNotSet = getLicenseName(l, config)
 	}
 
 	var license *ccmd.License
@@ -216,7 +217,7 @@ func ProcessArg(cmd *cobra.Command, args []string) (*Config, *cmd.License, strin
 
 	config.License["last"] = licenseName
 	config.Author["last"] = getAuthor(a, config)
-	return config, license, config.Author["last"]
+	return config, license, config.Author["last"], licenseIsNotSet
 }
 
 func getHeader(h string, c *Config) string {
@@ -233,11 +234,12 @@ func getText(t string, c *Config) string {
 	return t
 }
 
-func getLicenseName(l string, c *Config) string {
-	if l == "" {
-		return c.GetLicenseValue()
+func getLicenseName(l string, c *Config) (string, bool) {
+	notSet := l == ""
+	if notSet {
+		return c.GetLicenseValue(), notSet
 	}
-	return l
+	return l, notSet
 }
 
 func getAuthor(a string, c *Config) string {

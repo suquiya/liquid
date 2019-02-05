@@ -37,11 +37,11 @@ func newAddCmd() *cobra.Command {
 		Short: "create newfile of source code",
 		Long:  `This command create new file of source code using specified license`,
 		Run: func(cmd *cobra.Command, args []string) {
-			_, license, author := ProcessArg(cmd, args)
+			config, license, author, LIsNotSet := ProcessArg(cmd, args)
 			packageName, _ := cmd.Flags().GetString("package")
 			input := cmd.Flags().Args()
 			for _, fileName := range input {
-				createNew(fileName, license, author, packageName, cmd.OutOrStdout())
+				createNew(fileName, license, author, packageName, cmd.OutOrStdout(), LIsNotSet, config)
 			}
 		},
 	}
@@ -51,7 +51,7 @@ func newAddCmd() *cobra.Command {
 	return addCmd
 }
 
-func createNew(fn string, l *cmd.License, author, packageName string, messageWriter io.Writer) {
+func createNew(fn string, l *cmd.License, author, packageName string, messageWriter io.Writer, LicenseIsNotSet bool, config *Config) {
 	isFilePath, err := IsFilePath(fn)
 	if isFilePath {
 		fp, err := filepath.Abs(fn)
@@ -77,10 +77,34 @@ func createNew(fn string, l *cmd.License, author, packageName string, messageWri
 			pn = filepath.Base(dir)
 		}
 
-		if !isExistDir(dir) {
-			err := os.MkdirAll(fp, 0755)
+		license := l
+		if isExistDir(dir) {
+			if LicenseIsNotSet && config.License["fix"] == "" {
+				ld := getDirLicense(dir)
+				if ld != nil {
+					fmt.Printf("In %s, license file detected. License: %s", dir, ld.Name)
+					license = ld
+				}
+			}
+		} else {
+			fmt.Fprintf(messageWriter, "make dir %s\r\n", dir)
+			err := os.MkdirAll(dir, 0755)
+			if err != nil {
+				panic(err)
+			}
 		}
 
+		//CreateNewFile
+
+		f, err := os.Create(fp)
+		defer f.Close()
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			writeLicenseHeader(f, license, author)
+			fmt.Fprintln(f, "")
+			fmt.Fprintln(f, "package ", packageName)
+		}
 	} else {
 		fmt.Println(err)
 	}
