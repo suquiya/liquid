@@ -21,38 +21,24 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 )
 
-// haCmd represents the ha command
-var headCmd = &cobra.Command{
-	Use:   "head",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+// newHeadCmd
+func newHeadCmd() *cobra.Command {
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("ha called")
-	},
+	headCmd := &cobra.Command{
+		Use:   "sethead",
+		Short: "set license header to .go files in input directory or specified files.",
+		Long:  `liquid head add header to .go files in input directory or  input specified files. If user specified files already have license header, liquid change header to specified license.`,
+		Run: func(cmd *cobra.Command, args []string) {
+
+		},
+	}
+
+	headCmd.Flags().BoolP("directory", "d", true, "This flag shows whether input is directory or not (default true).")
+	headCmd.Flags().BoolP("repeat", "r", false, "This flag decide whether add license to subdirectory recursively or not")
+	headCmd.Flags().BoolP("file", "f", false, "If this flag is true, input paths are assumed files.")
+
+	return headCmd
 }
-
-/*
-func init() {
-	rootCmd.AddCommand(haCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// haCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// haCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-}
-*/

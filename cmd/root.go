@@ -134,28 +134,23 @@ func newRootCmd() *cobra.Command {
 		`,
 		// Uncomment the following line if your bare application
 		// has an action associated with it:
-		Run: func(cmd *cobra.Command, args []string) {
-			c, err := cmd.Flags().GetBool("customLicense")
+		/*
+			Run: func(cmd *cobra.Command, args []string) {
 
-			if err != nil {
-				panic(err)
-			}
-
-			if c {
-				fmt.Println("空っぽ")
-			}
-		},
+			},
+		*/
 		//RunE: Process,
 	}
 
 	rootCmd.AddCommand(newAddCmd())
+	rootCmd.AddCommand(newHeadCmd())
 
-	rootCmd.Flags().StringP("license", "l", "mit", "name of license (first default is mit, and after first use, config record what user choose and set it default)")
-	rootCmd.Flags().StringP("author", "a", "COPYRIGHT HOLDER", "author(copyright holder) name for copyright (default is COPYTIGHT HOLDER)")
-	rootCmd.Flags().BoolP("customLicense", "c", false, "cust")
-	rootCmd.Flags().String("config", "", "config file. Default is "+getDefaultConfigPath())
-	rootCmd.Flags().String("Header", "", "file path of custom license header")
-	rootCmd.Flags().String("Text", "", "file path of custom license text")
+	rootCmd.PersistentFlags().StringP("license", "l", "mit", "name of license (first default is mit, and after first use, config record what user choose and set it default)")
+	rootCmd.PersistentFlags().StringP("author", "a", "COPYRIGHT HOLDER", "author(copyright holder) name for copyright (default is COPYTIGHT HOLDER)")
+	rootCmd.PersistentFlags().BoolP("customLicense", "c", false, "Ir use custom license, turn on this flag.")
+	rootCmd.PersistentFlags().String("config", "", "config file. Default is "+getDefaultConfigPath())
+	rootCmd.PersistentFlags().String("Header", "", "file path of custom license header. This flag cannot be use without customLicense flag on.")
+	rootCmd.PersistentFlags().String("Text", "", "file path of custom license text. This flag cannot be use without customLicense flag on.")
 	return rootCmd
 }
 
@@ -189,26 +184,30 @@ func ProcessArg(cmd *cobra.Command, args []string) (*Config, *cmd.License, strin
 	licenseName := ""
 	if c {
 		licenseName = "custom"
-	} else if l == "" {
-		licenseName = config.GetLicenseValue()
 	} else {
-		licenseName = l
+		licenseName = getLicenseName(l, config)
 	}
 
 	var license *ccmd.License
 	if licenseName == "custom" {
+		h, err := cmd.Flags().GetString("Header")
+		if err != nil {
+			panic(err)
+		}
+		t, err := cmd.Flags().GetString("Text")
+		if err != nil {
+			panic(err)
+		}
+
+		headPath, textPath := getHeader(h, config), getText(t, config)
+		license, err = CreateCustomLicense(headPath, textPath)
+		if err != nil {
+			fmt.Println(err)
+			license = GetOSSLicense("mit")
+		}
 
 	} else {
-		li, exist := OSSLicenses[licenseName]
-		if !exist {
-			err := fmt.Errorf("OSSLicenses not hit")
-			cmd.Println(err)
-			cmd.Println("liquid automatically choose mit")
-			licenseName = "mit"
-			li, _ = OSSLicenses[licenseName]
-		}
-		license = &li
-
+		license = GetOSSLicense(licenseName)
 	}
 	a, err := cmd.Flags().GetString("author")
 	if err != nil {
@@ -218,6 +217,27 @@ func ProcessArg(cmd *cobra.Command, args []string) (*Config, *cmd.License, strin
 	config.License["last"] = licenseName
 	config.Author["last"] = getAuthor(a, config)
 	return config, license, config.Author["last"]
+}
+
+func getHeader(h string, c *Config) string {
+	if h == "" {
+		return c.License["customHeaderFile"]
+	}
+	return h
+}
+
+func getText(t string, c *Config) string {
+	if t == "" {
+		return c.License["customTextFile"]
+	}
+	return t
+}
+
+func getLicenseName(l string, c *Config) string {
+	if l == "" {
+		return c.GetLicenseValue()
+	}
+	return l
 }
 
 func getAuthor(a string, c *Config) string {
@@ -247,6 +267,35 @@ func IsExistFilePath(val string) (bool, error) {
 	}
 
 	return true, err
+}
+
+//IsExistFile validate whether val is exist or not
+func IsExistFile(val string) (bool, error) {
+	fi, err := os.Stat(val)
+
+	if os.IsNotExist(err) {
+		return true, nil
+	}
+
+	if fi.IsDir() {
+		return false, fmt.Errorf("%s is directory", val)
+	}
+
+	return false, err
+}
+
+//IsFilePath validate whether val is file path or not
+func IsFilePath(val string) (bool, error) {
+	absPath, err := filepath.Abs(val)
+	if err != nil {
+		return false, err
+	}
+
+	if is, _ := govalidator.IsFilePath(absPath); !is {
+		return is, fmt.Errorf("%s is not file path", val)
+	}
+
+	return true, nil
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

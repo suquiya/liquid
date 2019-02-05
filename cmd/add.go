@@ -21,6 +21,10 @@
 package cmd
 
 import (
+	"fmt"
+	"io"
+	"path/filepath"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/cobra/cmd"
 )
@@ -28,17 +32,51 @@ import (
 // newCmd represents the new command
 func newAddCmd() *cobra.Command {
 	addCmd := &cobra.Command{
-		Use:   "newfile",
+		Use:   "add [filename]",
 		Short: "create newfile of source code",
 		Long:  `This command create new file of source code using specified license`,
 		Run: func(cmd *cobra.Command, args []string) {
-
+			_, license, author := ProcessArg(cmd, args)
+			packageName, _ := cmd.Flags().GetString("package")
+			input := cmd.Flags().Args()
+			for _, fileName := range input {
+				createNew(fileName, license, author, packageName, cmd.OutOrStdout())
+			}
 		},
 	}
+
+	addCmd.Flags().StringP("package", "p", "", "package name for go file")
 
 	return addCmd
 }
 
-func createNew(dir, fn string, l *cmd.License, author string) {
+func createNew(fn string, l *cmd.License, author, packageName string, messageWriter io.Writer) {
+	isFilePath, err := IsFilePath(fn)
+	if isFilePath {
+		fp, err := filepath.Abs(fn)
+		if err != nil {
+			panic(err)
+		}
+		isExist, err := IsExistFile(fp)
+		if isExist {
+			fmt.Fprintf(messageWriter, "%s is exist. liquid did not process about %s.\r\n", fp, fp)
+			return
+		}
 
+		if err != nil {
+			fmt.Fprintf(messageWriter, err.Error())
+			fmt.Fprintln(messageWriter)
+			fmt.Fprintf(messageWriter, "liquid did not process about %s.\r\n", fp)
+			return
+		}
+
+		dir := filepath.Dir(fp)
+		pn := packageName
+		if pn == "" {
+			pn = filepath.Base(dir)
+		}
+
+	} else {
+		fmt.Println(err)
+	}
 }

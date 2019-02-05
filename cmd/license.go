@@ -24,6 +24,8 @@ package cmd
 import (
 	"fmt"
 	"io/ioutil"
+	"strings"
+	"time"
 
 	"github.com/spf13/cobra/cobra/cmd"
 )
@@ -61,10 +63,36 @@ func CreateCustomLicense(headPath, textPath string) (*cmd.License, error) {
 
 }
 
+//GetOSSLicense get an OSSLicense struct from license name
+func GetOSSLicense(licenseName string) *cmd.License {
+	li, exist := OSSLicenses[licenseName]
+	if !exist {
+		err := fmt.Errorf("OSSLicenses not hit")
+		fmt.Println(err)
+		fmt.Println("liquid automatically choose mit")
+		licenseName = "mit"
+		li, _ = OSSLicenses[licenseName]
+	}
+	return &li
+}
+
 func readFile(path string) string {
 	b, err := ioutil.ReadFile(path)
 	if err != nil {
 		panic(err)
 	}
 	return string(b)
+}
+
+func newFileContent(license *cmd.License, author string) {
+
+}
+
+func getNowCopyrightText(author string) string {
+	var sb strings.Builder
+	sb.Grow(18 + len(author))
+	sb.WriteString("copyright (c) ")
+	sb.WriteString(time.Now().Format("2006"))
+	sb.WriteString(author)
+	return sb.String()
 }
