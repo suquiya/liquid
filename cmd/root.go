@@ -32,8 +32,6 @@ import (
 	homedir "github.com/mitchellh/go-homedir"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/cobra/cobra/cmd"
-	ccmd "github.com/spf13/cobra/cobra/cmd"
 )
 
 //Config storage config
@@ -155,7 +153,7 @@ func newRootCmd() *cobra.Command {
 }
 
 //ProcessArg process args to get license,author and config data from arg and config file.
-func ProcessArg(cmd *cobra.Command, args []string) (*Config, *cmd.License, string, bool) {
+func ProcessArg(cmd *cobra.Command, args []string) (*Config, *License, string, bool) {
 	configPath, err := cmd.Flags().GetString("config")
 	if err != nil {
 		panic(err)
@@ -189,7 +187,7 @@ func ProcessArg(cmd *cobra.Command, args []string) (*Config, *cmd.License, strin
 		licenseName, licenseIsNotSet = getLicenseName(l, config)
 	}
 
-	var license *ccmd.License
+	var license *License
 	if licenseName == "custom" {
 		h, err := cmd.Flags().GetString("Header")
 		if err != nil {

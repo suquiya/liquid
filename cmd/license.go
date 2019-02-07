@@ -34,14 +34,32 @@ import (
 )
 
 //OSSLicenses store license information of some OSS Licenses.
-var OSSLicenses map[string]cmd.License
+var OSSLicenses map[string]*License
+
+//License represents License data
+type License struct {
+	Name   string
+	Text   string
+	Header string
+}
+
+func convertCLToLL(cl *cmd.License) *License {
+	return &License{
+		Name:   cl.Name,
+		Header: cl.Header,
+		Text:   cl.Text,
+	}
+}
 
 func init() {
-	OSSLicenses = cmd.Licenses
+	OSSLicenses = make(map[string]*License)
+	for _, cl := range cmd.Licenses {
+		OSSLicenses[cl.Name] = convertCLToLL(&cl)
+	}
 }
 
 //CreateCustomLicense create License struct from file
-func CreateCustomLicense(headPath, textPath string) (*cmd.License, error) {
+func CreateCustomLicense(headPath, textPath string) (*License, error) {
 	h := headPath
 	t := textPath
 	e, err := IsExistFilePath(h)
@@ -49,17 +67,17 @@ func CreateCustomLicense(headPath, textPath string) (*cmd.License, error) {
 
 	if e {
 		if e2 {
-			return &cmd.License{Name: "custom", Header: readFile(h), Text: readFile(t)}, nil
+			return &License{Name: "custom", Header: readFile(h), Text: readFile(t)}, nil
 		}
 		fmt.Println(err2)
 		h = t
 		hStr := readFile(h)
-		return &cmd.License{Name: "custom", Header: hStr, Text: hStr}, nil
+		return &License{Name: "custom", Header: hStr, Text: hStr}, nil
 	}
 	if e2 {
 		t = h
 		tStr := readFile(t)
-		return &cmd.License{Name: "custom", Header: tStr, Text: tStr}, nil
+		return &License{Name: "custom", Header: tStr, Text: tStr}, nil
 	}
 
 	return nil, fmt.Errorf("%s\r\n%s", err.Error(), err2.Error())
@@ -67,7 +85,7 @@ func CreateCustomLicense(headPath, textPath string) (*cmd.License, error) {
 }
 
 //GetOSSLicense get an OSSLicense struct from license name
-func GetOSSLicense(licenseName string) *cmd.License {
+func GetOSSLicense(licenseName string) *License {
 	li, exist := OSSLicenses[licenseName]
 	if !exist {
 		err := fmt.Errorf("OSSLicenses not hit")
@@ -76,7 +94,7 @@ func GetOSSLicense(licenseName string) *cmd.License {
 		licenseName = "mit"
 		li, _ = OSSLicenses[licenseName]
 	}
-	return &li
+	return li
 }
 
 func readFile(path string) string {
@@ -87,21 +105,21 @@ func readFile(path string) string {
 	return string(b)
 }
 
-func writeLicenseHeader(w io.Writer, license *cmd.License, author string) {
+func (l *License) writeLicenseHeader(w io.Writer, author string) {
 	ct := getNowCopyrightText(author)
 	data := make(map[string]interface{})
 	data["copyright"] = ct
-	data["licenseHeader"] = license.Header
+	data["licenseHeader"] = l.Header
 
 	template := `{{comment .copyright}}
 	{{comment .licenseHeader}}
 
 	`
-	execLicenseTemplate(template, data, w)
+	execTemplate(template, data, w)
 
 }
 
-func execLicenseTemplate(tmpl string, data interface{}, w io.Writer) error {
+func execTemplate(tmpl string, data interface{}, w io.Writer) error {
 	t, err := template.New("").Funcs(template.FuncMap{"comment": CommentifyString}).Parse(tmpl)
 
 	if err != nil {
@@ -148,13 +166,13 @@ func getNowCopyrightText(author string) string {
 	return sb.String()
 }
 
-func getDirLicense(dir string) *cmd.License {
+func getDirLicense(dir string) *License {
 	lc := findAndGetLicenseContent(dir)
 	if lc == nil {
 		return nil
 	}
 
-	var l *cmd.License
+	var l *License
 	l = nil
 	lcStr := string(lc)
 	lcStr = strings.TrimSpace(lcStr)
@@ -162,13 +180,13 @@ func getDirLicense(dir string) *cmd.License {
 		t := strings.TrimSpace(ol.Text)
 		h := strings.TrimSpace(ol.Header)
 		if strings.HasSuffix(lcStr, t) || strings.HasPrefix(lcStr, h) {
-			l = &ol
+			l = ol
 			break
 		}
 	}
 
 	if l == nil {
-		l = &cmd.License{
+		l = &License{
 			Name:   "custom",
 			Text:   lcStr,
 			Header: lcStr,

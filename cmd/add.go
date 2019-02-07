@@ -27,7 +27,6 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/cobra/cobra/cmd"
 )
 
 // newCmd represents the new command
@@ -51,7 +50,7 @@ func newAddCmd() *cobra.Command {
 	return addCmd
 }
 
-func createNew(fn string, l *cmd.License, author, packageName string, messageWriter io.Writer, LicenseIsNotSet bool, config *Config) {
+func createNew(fn string, l *License, author, packageName string, messageWriter io.Writer, LicenseIsNotSet bool, config *Config) {
 	isFilePath, err := IsFilePath(fn)
 	if isFilePath {
 		fp, err := filepath.Abs(fn)
@@ -60,14 +59,14 @@ func createNew(fn string, l *cmd.License, author, packageName string, messageWri
 		}
 		isExist, err := IsExistFile(fp)
 		if isExist {
-			fmt.Fprintf(messageWriter, "%s is exist. liquid did not process about %s.\r\n", fp, fp)
+			fmt.Fprintf(messageWriter, "%s is exist. liquid stop processing about %s.\r\n", fp, fp)
 			return
 		}
 
 		if err != nil {
 			fmt.Fprintf(messageWriter, err.Error())
 			fmt.Fprintln(messageWriter)
-			fmt.Fprintf(messageWriter, "liquid did not process about %s.\r\n", fp)
+			fmt.Fprintf(messageWriter, "liquid stop processing about %s.\r\n", fp)
 			return
 		}
 
@@ -94,14 +93,12 @@ func createNew(fn string, l *cmd.License, author, packageName string, messageWri
 			}
 		}
 
-		//CreateNewFile
-
 		f, err := os.Create(fp)
 		defer f.Close()
 		if err != nil {
 			fmt.Println(err)
 		} else {
-			writeLicenseHeader(f, license, author)
+			license.writeLicenseHeader(f, author)
 			fmt.Fprintln(f, "")
 			fmt.Fprintln(f, "package ", packageName)
 		}
