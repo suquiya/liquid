@@ -21,100 +21,24 @@
 package cmd
 
 import (
-	"fmt"
-	"io"
-	"os"
-	"path/filepath"
-
 	"github.com/spf13/cobra"
 )
 
-// newCmd represents the new command
+// newHeadCmd
 func newAddCmd() *cobra.Command {
-	addCmd := &cobra.Command{
-		Use:   "add [filename]",
-		Short: "create newfile of source code",
-		Long:  `This command create new file of source code using specified license`,
+
+	headCmd := &cobra.Command{
+		Use:   "add",
+		Short: "add license header to .go files in input directory or specified files.",
+		Long:  `liquid head add header to .go files in input directory or  input specified files. If user specified files already have license header, liquid change header to specified license.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			config, license, author, LIsNotSet := ProcessArg(cmd, args)
-			packageName, _ := cmd.Flags().GetString("package")
-			input := cmd.Flags().Args()
-			for _, fileName := range input {
-				createNew(fileName, license, author, packageName, cmd.OutOrStdout(), LIsNotSet, config)
-			}
+
 		},
 	}
 
-	addCmd.Flags().StringP("package", "p", "", "package name for go file")
+	headCmd.Flags().BoolP("directory", "d", true, "This flag shows whether input is directory or not (default true).")
+	headCmd.Flags().BoolP("repeat", "r", false, "This flag decide whether add license to subdirectory recursively or not")
+	headCmd.Flags().BoolP("file", "f", false, "If this flag is true, input paths are assumed files.")
 
-	return addCmd
-}
-
-func createNew(fn string, l *License, author, packageName string, messageWriter io.Writer, LicenseIsNotSet bool, config *Config) {
-	isFilePath, err := IsFilePath(fn)
-	if isFilePath {
-		fp, err := filepath.Abs(fn)
-		if err != nil {
-			panic(err)
-		}
-		isExist, err := IsExistFile(fp)
-		if isExist {
-			fmt.Fprintf(messageWriter, "%s is exist. liquid stop processing about %s.\r\n", fp, fp)
-			return
-		}
-
-		if err != nil {
-			fmt.Fprintf(messageWriter, err.Error())
-			fmt.Fprintln(messageWriter)
-			fmt.Fprintf(messageWriter, "liquid stop processing about %s.\r\n", fp)
-			return
-		}
-
-		dir := filepath.Dir(fp)
-		pn := packageName
-		if pn == "" {
-			pn = filepath.Base(dir)
-		}
-
-		license := l
-		if isExistDir(dir) {
-			if LicenseIsNotSet && config.License["fix"] == "" {
-				ld := getDirLicense(dir)
-				if ld != nil {
-					fmt.Printf("In %s, license file detected. License: %s", dir, ld.Name)
-					license = ld
-				}
-			}
-		} else {
-			fmt.Fprintf(messageWriter, "make dir %s\r\n", dir)
-			err := os.MkdirAll(dir, 0755)
-			if err != nil {
-				panic(err)
-			}
-		}
-
-		f, err := os.Create(fp)
-		defer f.Close()
-		if err != nil {
-			fmt.Println(err)
-		} else {
-			license.writeLicenseHeader(f, author)
-			fmt.Fprintln(f, "")
-			fmt.Fprintln(f, "package ", packageName)
-		}
-	} else {
-		fmt.Println(err)
-	}
-}
-
-func isExistDir(dir string) bool {
-	_, err := os.Stat(dir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return false
-		}
-		return false
-	}
-
-	return true
+	return headCmd
 }
