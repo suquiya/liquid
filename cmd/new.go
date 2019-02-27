@@ -30,9 +30,9 @@ import (
 )
 
 // newCmd represents the new command
-func newAddCmd() *cobra.Command {
-	addCmd := &cobra.Command{
-		Use:   "add [filename]",
+func newCreateCmd() *cobra.Command {
+	createCmd := &cobra.Command{
+		Use:   "new [filename]",
 		Short: "create newfile of source code",
 		Long:  `This command create new file of source code using specified license`,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -45,9 +45,9 @@ func newAddCmd() *cobra.Command {
 		},
 	}
 
-	addCmd.Flags().StringP("package", "p", "", "package name for go file")
+	createCmd.Flags().StringP("package", "p", "", "package name for go file")
 
-	return addCmd
+	return createCmd
 }
 
 func createNew(fn string, l *License, author, packageName string, messageWriter io.Writer, LicenseIsNotSet bool, config *Config) {

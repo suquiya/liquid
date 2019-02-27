@@ -21,18 +21,37 @@
 package cmd
 
 import (
+	"io"
+	"os"
+
 	"github.com/spf13/cobra"
 )
 
 // newHeadCmd
-func newHeadCmd() *cobra.Command {
+func newAddCmd() *cobra.Command {
 
 	headCmd := &cobra.Command{
-		Use:   "sethead",
-		Short: "set license header to .go files in input directory or specified files.",
+		Use:   "sethead [directoryPath]",
+		Short: "add license header to .go files in input directory or specified files.",
 		Long:  `liquid head add header to .go files in input directory or  input specified files. If user specified files already have license header, liquid change header to specified license.`,
 		Run: func(cmd *cobra.Command, args []string) {
+			config, license, author, LIsNotSet := ProcessArg(cmd, args)
+			var input []string
+			if cmd.Flags().NArg() < 1 {
+				input = make([]string, 1, 1)
+				var err error
+				input[0], err = os.Getwd()
+				if err != nil {
+					cmd.Println("input is empty and current directory cannnot be gotten.")
+					cmd.Println(err)
+				}
+			} else {
+				input = cmd.Flags().Args()
+			}
 
+			for _, dirPath := range input {
+				SetHeaderLicense(dirPath, license, author, cmd.OutOrStdout(), LIsNotSet, config)
+			}
 		},
 	}
 
@@ -41,4 +60,9 @@ func newHeadCmd() *cobra.Command {
 	headCmd.Flags().BoolP("file", "f", false, "If this flag is true, input paths are assumed files.")
 
 	return headCmd
+}
+
+//SetHeaderLicense is add license header to files that do not have license header and change files' license header if the files already have license header.
+func SetHeaderLicense(dirPath string, l *License, author string, messageW io.Writer, LIsNotSet bool, config *Config) {
+
 }

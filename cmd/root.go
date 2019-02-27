@@ -140,8 +140,8 @@ func newRootCmd() *cobra.Command {
 		//RunE: Process,
 	}
 
+	rootCmd.AddCommand(newCreateCmd())
 	rootCmd.AddCommand(newAddCmd())
-	rootCmd.AddCommand(newHeadCmd())
 
 	rootCmd.PersistentFlags().StringP("license", "l", "mit", "name of license (first default is mit or license that is detected from directory's LICENSE file. And after first use, config record what user choose and set it as \"mit\" position in default)")
 	rootCmd.PersistentFlags().StringP("author", "a", "COPYRIGHT HOLDER", "author(copyright holder) name for copyright (default is COPYTIGHT HOLDER)")
