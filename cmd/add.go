@@ -59,14 +59,14 @@ func createNew(fn string, l *License, author, packageName string, messageWriter 
 		}
 		isExist, err := IsExistFile(fp)
 		if isExist {
-			fmt.Fprintf(messageWriter, "%s is exist. liquid stop processing about %s.\r\n", fp, fp)
+			fmt.Fprintf(messageWriter, "%s is exist. %s not created.\r\n", fp, fp)
 			return
 		}
 
 		if err != nil {
 			fmt.Fprintf(messageWriter, err.Error())
 			fmt.Fprintln(messageWriter)
-			fmt.Fprintf(messageWriter, "liquid stop processing about %s.\r\n", fp)
+			fmt.Fprintf(messageWriter, "%s not created.\r\n", fp)
 			return
 		}
 
@@ -87,10 +87,12 @@ func createNew(fn string, l *License, author, packageName string, messageWriter 
 			}
 		} else {
 			fmt.Fprintf(messageWriter, "make dir %s\r\n", dir)
+			fmt.Printf("Making directry: %s\r\n", dir)
 			err := os.MkdirAll(dir, 0755)
 			if err != nil {
 				panic(err)
 			}
+			fmt.Printf("%s is made.", dir)
 		}
 
 		f, err := os.Create(fp)
@@ -98,9 +100,11 @@ func createNew(fn string, l *License, author, packageName string, messageWriter 
 		if err != nil {
 			fmt.Println(err)
 		} else {
+			//fmt.Printf("create: %s", fp)
 			license.writeLicenseHeader(f, author)
 			fmt.Fprintln(f, "")
 			fmt.Fprintln(f, "package ", packageName)
+			fmt.Printf("created: %s", fp)
 		}
 	} else {
 		fmt.Println(err)

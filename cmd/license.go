@@ -113,9 +113,11 @@ func (l *License) writeLicenseHeader(w io.Writer, author string) {
 
 	template := `{{comment .copyright}}
 	{{comment .licenseHeader}}
-
 	`
-	execTemplate(template, data, w)
+	err := execTemplate(template, data, w)
+	if err != nil {
+		panic(err)
+	}
 
 }
 
