@@ -168,7 +168,8 @@ func getNowCopyrightText(author string) string {
 	return sb.String()
 }
 
-func getDirLicense(dir string) *License {
+//GetDirLicense get license based on license file in dir
+func GetDirLicense(dir string) *License {
 	lc := findAndGetLicenseContent(dir)
 	if lc == nil {
 		return nil

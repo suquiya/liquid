@@ -22,7 +22,9 @@ package cmd
 
 import (
 	"io"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 )
@@ -49,20 +51,69 @@ func newAddCmd() *cobra.Command {
 				input = cmd.Flags().Args()
 			}
 
+			r, err := cmd.Flags().GetBool("recursively")
+
+			if err != nil {
+				panic(err)
+			}
+
+			if r {
+				rinput := make([]string, 0, 0)
+				for _, dir := range input {
+					rinput = append(rinput, dir)
+					err := filepath.Walk(dir, func(p string, fi os.FileInfo, err error) error {
+						if fi.IsDir() {
+							rinput = append(rinput, p)
+						}
+						return nil
+					})
+					if err != nil {
+						cmd.Println(err)
+					}
+				}
+
+				input = rinput
+			}
 			for _, dirPath := range input {
-				SetHeaderLicense(dirPath, license, author, cmd.OutOrStdout(), LIsNotSet, config)
+				err := SetHeaderLicense(dirPath, license, author, cmd.OutOrStdout(), LIsNotSet, config)
+				if err != nil {
+					cmd.Println(err)
+				}
 			}
 		},
 	}
 
 	headCmd.Flags().BoolP("directory", "d", true, "This flag shows whether input is directory or not (default true).")
-	headCmd.Flags().BoolP("repeat", "r", false, "This flag decide whether add license to subdirectory recursively or not")
+	headCmd.Flags().BoolP("recursively", "r", false, "This flag decide whether add license to subdirectory recursively or not. default is false")
 	headCmd.Flags().BoolP("file", "f", false, "If this flag is true, input paths are assumed files.")
 
 	return headCmd
 }
 
-//SetHeaderLicense is add license header to files that do not have license header and change files' license header if the files already have license header.
-func SetHeaderLicense(dirPath string, l *License, author string, messageW io.Writer, LIsNotSet bool, config *Config) {
+//SetHeaders is add license header to files that do not have license header and change files' license header if the files already have license header.
+func SetHeaders(dirPath string, l *License, author string, messageW io.Writer, LIsNotSet bool, config *Config) error {
+
+	license := l
+	if LIsNotSet {
+		license = GetDirLicense(dirPath)
+	}
+
+	sfis, err := ioutil.ReadDir(dirPath)
+
+	if err != nil {
+		return err
+	}
+
+	for _, file := range sfis {
+		if !file.IsDir() && filepath.Ext(file.Name()) == ".go" {
+			fp := filepath.Join(dirPath, file.Name())
+		}
+	}
+
+	return err
+}
+
+//SetFileHeader set file header to specified license.
+func SetFileHeader(fp string, fi os.FileInfo, l *License) {
 
 }
