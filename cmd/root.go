@@ -140,8 +140,8 @@ func newRootCmd() *cobra.Command {
 		//RunE: Process,
 	}
 
-	rootCmd.AddCommand(newCreateCmd())
 	rootCmd.AddCommand(newAddCmd())
+	rootCmd.AddCommand(newHeadCmd())
 
 	rootCmd.PersistentFlags().StringP("license", "l", "mit", "name of license (first default is mit or license that is detected from directory's LICENSE file. And after first use, config record what user choose and set it as \"mit\" position in default)")
 	rootCmd.PersistentFlags().StringP("author", "a", "COPYRIGHT HOLDER", "author(copyright holder) name for copyright (default is COPYTIGHT HOLDER)")
@@ -160,6 +160,7 @@ func ProcessArg(cmd *cobra.Command, args []string) (*Config, *License, string, b
 	}
 
 	if exist, _ := IsExistFilePath(configPath); !exist {
+		cmd.Println("config file not exist")
 		configPath = getDefaultConfigPath()
 	}
 
@@ -215,7 +216,32 @@ func ProcessArg(cmd *cobra.Command, args []string) (*Config, *License, string, b
 
 	config.License["last"] = licenseName
 	config.Author["last"] = getAuthor(a, config)
+
+	err = WriteConfigFile(config, configPath)
+	if err != nil {
+		cmd.Println("error occured in write config file")
+		cmd.Println(err)
+	}
 	return config, license, config.Author["last"], licenseIsNotSet
+}
+
+//WriteConfigFile output config to configPath with JSON format.
+func WriteConfigFile(config *Config, configPath string) error {
+	perm := os.FileMode(0644)
+
+	if exist, _ := IsExistFile(configPath); exist {
+		fi, err := os.Stat(configPath)
+		if err != nil {
+			return err
+		}
+		perm = fi.Mode()
+	}
+
+	configData, err := json.Marshal(config)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(configPath, configData, perm)
 }
 
 func getHeader(h string, c *Config) string {
@@ -274,14 +300,14 @@ func IsExistFile(val string) (bool, error) {
 	fi, err := os.Stat(val)
 
 	if os.IsNotExist(err) {
-		return true, nil
+		return false, nil
 	}
 
 	if fi.IsDir() {
 		return false, fmt.Errorf("%s is directory", val)
 	}
 
-	return false, err
+	return true, err
 }
 
 //IsFilePath validate whether val is file path or not

@@ -53,8 +53,8 @@ func convertCLToLL(cl *cmd.License) *License {
 
 func init() {
 	OSSLicenses = make(map[string]*License)
-	for _, cl := range cmd.Licenses {
-		OSSLicenses[cl.Name] = convertCLToLL(&cl)
+	for key, cl := range cmd.Licenses {
+		OSSLicenses[key] = convertCLToLL(&cl)
 	}
 }
 
@@ -93,6 +93,7 @@ func GetOSSLicense(licenseName string) *License {
 		fmt.Println("liquid automatically choose mit")
 		licenseName = "mit"
 		li, _ = OSSLicenses[licenseName]
+		//fmt.Println(OSSLicenses)
 	}
 	return li
 }

@@ -30,28 +30,32 @@ import (
 )
 
 // newCmd represents the new command
-func newCreateCmd() *cobra.Command {
-	createCmd := &cobra.Command{
+func newAddCmd() *cobra.Command {
+	addCmd := &cobra.Command{
 		Use:   "add [filename]",
 		Short: "create newfile of source code",
 		Long:  `This command create new file of source code using specified license`,
 		Run: func(cmd *cobra.Command, args []string) {
+			//cmd.Printf("add %s\r\n", args)
 			config, license, author, LIsNotSet := ProcessArg(cmd, args)
 			packageName, _ := cmd.Flags().GetString("package")
 			input := cmd.Flags().Args()
+
+			//fmt.Println(license)
 			for _, fileName := range input {
 				createNew(fileName, license, author, packageName, cmd.OutOrStdout(), LIsNotSet, config)
 			}
 		},
 	}
 
-	createCmd.Flags().StringP("package", "p", "", "package name for go file")
+	addCmd.Flags().StringP("package", "p", "", "package name for go file")
 
-	return createCmd
+	return addCmd
 }
 
 func createNew(fn string, l *License, author, packageName string, messageWriter io.Writer, LicenseIsNotSet bool, config *Config) {
 	isFilePath, err := IsFilePath(fn)
+	//fmt.Println("l", l)
 	if isFilePath {
 		fp, err := filepath.Abs(fn)
 		if err != nil {
@@ -96,11 +100,11 @@ func createNew(fn string, l *License, author, packageName string, messageWriter 
 		}
 
 		f, err := os.Create(fp)
-		defer f.Close()
 		if err != nil {
-			fmt.Println(err)
+			fmt.Fprintln(messageWriter, err)
 		} else {
-			//fmt.Printf("create: %s", fp)
+			defer f.Close()
+			fmt.Printf("begin create: %s", fp)
 			license.writeLicenseHeader(f, author)
 			fmt.Fprintln(f, "")
 			fmt.Fprintln(f, "package ", packageName)

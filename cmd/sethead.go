@@ -33,7 +33,7 @@ import (
 )
 
 // newHeadCmd
-func newAddCmd() *cobra.Command {
+func newHeadCmd() *cobra.Command {
 
 	headCmd := &cobra.Command{
 		Use:   "sethead [Paths of files or directories]",
