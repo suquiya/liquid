@@ -32,7 +32,7 @@ import (
 // newCmd represents the new command
 func newCreateCmd() *cobra.Command {
 	createCmd := &cobra.Command{
-		Use:   "new [filename]",
+		Use:   "add [filename]",
 		Short: "create newfile of source code",
 		Long:  `This command create new file of source code using specified license`,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -79,7 +79,7 @@ func createNew(fn string, l *License, author, packageName string, messageWriter 
 		license := l
 		if isExistDir(dir) {
 			if LicenseIsNotSet && config.License["fix"] == "" {
-				ld := getDirLicense(dir)
+				ld := GetDirLicense(dir)
 				if ld != nil {
 					fmt.Printf("In %s, license file detected. License: %s", dir, ld.Name)
 					license = ld

@@ -21,10 +21,13 @@
 package cmd
 
 import (
+	"bufio"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -33,7 +36,7 @@ import (
 func newAddCmd() *cobra.Command {
 
 	headCmd := &cobra.Command{
-		Use:   "sethead [directoryPath]",
+		Use:   "sethead [Paths of files or directories]",
 		Short: "add license header to .go files in input directory or specified files.",
 		Long:  `liquid head add header to .go files in input directory or  input specified files. If user specified files already have license header, liquid change header to specified license.`,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -59,23 +62,31 @@ func newAddCmd() *cobra.Command {
 
 			if r {
 				rinput := make([]string, 0, 0)
-				for _, dir := range input {
-					rinput = append(rinput, dir)
-					err := filepath.Walk(dir, func(p string, fi os.FileInfo, err error) error {
-						if fi.IsDir() {
-							rinput = append(rinput, p)
-						}
-						return nil
-					})
+				for _, inputPath := range input {
+					ii, err := os.Stat(inputPath)
 					if err != nil {
 						cmd.Println(err)
+					} else {
+
+						rinput = append(rinput, inputPath)
+						if ii.IsDir() {
+							err := filepath.Walk(inputPath, func(p string, fi os.FileInfo, err error) error {
+								if fi.IsDir() {
+									rinput = append(rinput, p)
+								}
+								return nil
+							})
+							if err != nil {
+								cmd.Println(err)
+							}
+						}
 					}
 				}
 
 				input = rinput
 			}
-			for _, dirPath := range input {
-				err := SetHeaderLicense(dirPath, license, author, cmd.OutOrStdout(), LIsNotSet, config)
+			for _, inputPath := range input {
+				err := SetHeaderLicense(inputPath, license, author, cmd.OutOrStdout(), LIsNotSet, config)
 				if err != nil {
 					cmd.Println(err)
 				}
@@ -90,30 +101,173 @@ func newAddCmd() *cobra.Command {
 	return headCmd
 }
 
-//SetHeaders is add license header to files that do not have license header and change files' license header if the files already have license header.
-func SetHeaders(dirPath string, l *License, author string, messageW io.Writer, LIsNotSet bool, config *Config) error {
+//SetHeaderLicense is add license header to files that do not have license header and change files' license header if the files already have license header.
+func SetHeaderLicense(inputPath string, l *License, author string, messageW io.Writer, LIsNotSet bool, config *Config) error {
 
 	license := l
-	if LIsNotSet {
-		license = GetDirLicense(dirPath)
-	}
-
-	sfis, err := ioutil.ReadDir(dirPath)
-
+	ii, err := os.Stat(inputPath)
 	if err != nil {
 		return err
 	}
-
-	for _, file := range sfis {
-		if !file.IsDir() && filepath.Ext(file.Name()) == ".go" {
-			fp := filepath.Join(dirPath, file.Name())
+	if LIsNotSet {
+		if ii.IsDir() {
+			license = GetDirLicense(inputPath)
+		} else {
+			license = GetDirLicense(filepath.Dir(inputPath))
 		}
+	}
+
+	if ii.IsDir() {
+		sfis, err := ioutil.ReadDir(inputPath)
+
+		if err != nil {
+			return err
+		}
+
+		for _, file := range sfis {
+			if !file.IsDir() && filepath.Ext(file.Name()) == ".go" {
+				fp := filepath.Join(inputPath, file.Name())
+				err := SetFileHeader(fp, file, license, author)
+				if err != nil {
+					fmt.Fprintln(messageW, err)
+				} else {
+					fmt.Fprintln(messageW, "added license header to ", fp, ".")
+				}
+			}
+		}
+	} else {
+		err := SetFileHeader(inputPath, ii, license, author)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintln(messageW, "added license header to ", inputPath, ".")
 	}
 
 	return err
 }
 
 //SetFileHeader set file header to specified license.
-func SetFileHeader(fp string, fi os.FileInfo, l *License) {
+func SetFileHeader(fp string, fi os.FileInfo, l *License, author string) error {
+	f, err := os.Open(fp)
+	if err != nil {
+		return err
+	}
 
+	tmp, err := os.Create(fp + ".tmp")
+	if err != nil {
+		return err
+	}
+	tmpw := bufio.NewWriter(tmp)
+
+	sc := bufio.NewScanner(f)
+
+	loop := true
+
+	text := ""
+	s := true
+	for loop {
+		s = sc.Scan()
+		if s {
+			text = sc.Text()
+			ttext := strings.TrimSpace(text)
+			if ttext != "" && ttext != "//" {
+				loop = false
+			}
+		} else {
+			loop = s
+		}
+	}
+	if strings.HasPrefix(text, "//") {
+		//file begin with comment line
+		ttext := strings.TrimPrefix(text, "//")
+		ttext = strings.TrimSpace(ttext)
+		if strings.HasPrefix(ttext, "Copyright") {
+			//detect Copyright Comment block
+			detecting := true
+			for detecting {
+				s := sc.Scan()
+				if s {
+					text = sc.Text()
+					if !strings.HasPrefix(text, "//") {
+						detecting = false
+					}
+				} else {
+					text = ""
+					detecting = false
+				}
+			}
+			l.writeLicenseHeader(tmpw, author)
+			if text != "" {
+				for sc.Scan() {
+					tmpw.WriteString(sc.Text())
+				}
+			}
+		} else {
+			l.writeLicenseHeader(tmpw, author)
+			tmpw.WriteString(text)
+			for sc.Scan() {
+				tmpw.WriteString(sc.Text())
+			}
+		}
+	} else if strings.HasPrefix(text, "/*") {
+		var commentStack strings.Builder
+		if strings.Contains(text, "*/") {
+			ttext := strings.TrimPrefix(text, "/*")
+			ttext = strings.TrimSpace(ttext)
+			if strings.HasPrefix(ttext, "Copyright") {
+				l.writeLicenseHeader(tmpw, author)
+				e := strings.Index(text, "*/")
+				tmpw.WriteString(text[e+2:])
+				for sc.Scan() {
+					tmpw.WriteString(sc.Text())
+				}
+			}
+		} else {
+			commentStack.WriteString(text)
+			//detecting comment block
+			detecting := true
+			for detecting {
+				if sc.Scan() {
+					commentStack.WriteString(sc.Text())
+					if strings.Contains(sc.Text(), "*/") {
+						detecting = false
+					}
+				} else {
+					detecting = false
+				}
+			}
+			comment := commentStack.String()
+			tcomment := strings.TrimPrefix(comment, "/*")
+			tcomment = strings.TrimSpace(tcomment)
+			if strings.HasPrefix(tcomment, "Copyright") {
+				l.writeLicenseHeader(tmpw, author)
+				for sc.Scan() {
+					tmpw.WriteString(sc.Text())
+				}
+			} else {
+				l.writeLicenseHeader(tmpw, author)
+				tmpw.WriteString(comment)
+				for sc.Scan() {
+					tmpw.WriteString(sc.Text())
+				}
+			}
+		}
+
+	} else {
+		l.writeLicenseHeader(tmpw, author)
+		tmpw.WriteString(text)
+		for sc.Scan() {
+			tmpw.WriteString(sc.Text())
+		}
+	}
+	tmpw.Flush()
+	f.Close()
+	tmp.Close()
+	err = os.Rename(fp+".tmp", fp)
+	if err != nil {
+		return err
+	}
+
+	//fmt.Fprintln(messageW, "added license header to ", fp, ".")
+	return err
 }
