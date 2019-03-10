@@ -54,7 +54,9 @@ func convertCLToLL(cl *cmd.License) *License {
 func init() {
 	OSSLicenses = make(map[string]*License)
 	for key, cl := range cmd.Licenses {
-		OSSLicenses[key] = convertCLToLL(&cl)
+		l := convertCLToLL(&cl)
+		OSSLicenses[key] = l
+		OSSLicenses[l.Name] = l
 	}
 }
 
@@ -113,8 +115,8 @@ func (l *License) writeLicenseHeader(w io.Writer, author string) {
 	data["licenseHeader"] = l.Header
 
 	template := `{{comment .copyright}}
-	{{comment .licenseHeader}}
-	`
+{{comment .licenseHeader}}
+`
 	err := execTemplate(template, data, w)
 	if err != nil {
 		panic(err)
@@ -142,7 +144,7 @@ func CommentifyString(input string) string {
 	lines := strings.Split(inputNLd, "\n")
 	var sb strings.Builder
 	sb.Grow(len(input) + len(lines)*len("\n"))
-	c := "//"
+	c := "// "
 	for _, l := range lines {
 		if strings.HasPrefix(l, c) {
 			sb.WriteString(l)
@@ -162,7 +164,7 @@ func CommentifyString(input string) string {
 func getNowCopyrightText(author string) string {
 	var sb strings.Builder
 	sb.Grow(19 + len(author))
-	sb.WriteString("copyright (c) ")
+	sb.WriteString("Copyright (c) ")
 	sb.WriteString(time.Now().Format("2006"))
 	sb.WriteString(" ")
 	sb.WriteString(author)

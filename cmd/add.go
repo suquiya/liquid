@@ -39,6 +39,7 @@ func newAddCmd() *cobra.Command {
 			//cmd.Printf("add %s\r\n", args)
 			config, license, author, LIsNotSet := ProcessArg(cmd, args)
 			packageName, _ := cmd.Flags().GetString("package")
+			//fmt.Printf("packageName:[%s]\r\n", packageName)
 			input := cmd.Flags().Args()
 
 			//fmt.Println(license)
@@ -55,13 +56,14 @@ func newAddCmd() *cobra.Command {
 
 func createNew(fn string, l *License, author, packageName string, messageWriter io.Writer, LicenseIsNotSet bool, config *Config) {
 	isFilePath, err := IsFilePath(fn)
-	//fmt.Println("l", l)
+	//fmt.Fprintf(messageWriter, "l:H-[%s],T-[%s]\r\n", l.Header, l.Text)
 	if isFilePath {
 		fp, err := filepath.Abs(fn)
 		if err != nil {
 			panic(err)
 		}
 		isExist, err := IsExistFile(fp)
+		//fmt.Fprintf(messageWriter, "fp[%s]\r\n", fp)
 		if isExist {
 			fmt.Fprintf(messageWriter, "%s is exist. %s not created.\r\n", fp, fp)
 			return
@@ -73,11 +75,13 @@ func createNew(fn string, l *License, author, packageName string, messageWriter 
 			fmt.Fprintf(messageWriter, "%s not created.\r\n", fp)
 			return
 		}
-
+		//fmt.Fprintf(messageWriter, "fp[%s]\r\n", fp)
 		dir := filepath.Dir(fp)
 		pn := packageName
 		if pn == "" {
+			//fmt.Fprintf(messageWriter, "base:[%s]\r\n", filepath.Base(dir))
 			pn = filepath.Base(dir)
+			//fmt.Fprintf(messageWriter, "pn:[%s]\r\n", pn)
 		}
 
 		license := l
@@ -96,7 +100,7 @@ func createNew(fn string, l *License, author, packageName string, messageWriter 
 			if err != nil {
 				panic(err)
 			}
-			fmt.Printf("%s is made.", dir)
+			fmt.Printf("%s is made.\r\n", dir)
 		}
 
 		f, err := os.Create(fp)
@@ -104,11 +108,12 @@ func createNew(fn string, l *License, author, packageName string, messageWriter 
 			fmt.Fprintln(messageWriter, err)
 		} else {
 			defer f.Close()
-			fmt.Printf("begin create: %s", fp)
+			fmt.Fprintf(messageWriter, "begin create: %s\r\n", fp)
 			license.writeLicenseHeader(f, author)
 			fmt.Fprintln(f, "")
-			fmt.Fprintln(f, "package ", packageName)
-			fmt.Printf("created: %s", fp)
+			//fmt.Println("pn:[", pn, "]")
+			fmt.Fprintln(f, "package", pn)
+			fmt.Fprintf(messageWriter, "created: %s\r\n", fp)
 		}
 	} else {
 		fmt.Println(err)
