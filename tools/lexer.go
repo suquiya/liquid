@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package cmd
+package tools
 
 import "bufio"
 
@@ -76,3 +76,19 @@ func (n *NotCommentToken) Content() []byte {
 func (n *NotCommentToken) ContentString() string {
 	return string(n.Content())
 }
+
+//CommentType represents type of comment
+type CommentType int
+
+//CommentBlock is data for comment block of source code.
+type CommentBlock struct {
+	ct CommentType
+	r  []byte
+}
+
+const (
+	//Lines means type of "//"
+	Lines CommentType = iota
+	//Wrap means type of "/*" ~ "*/"
+	Wrap
+)

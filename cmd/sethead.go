@@ -30,6 +30,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/suquiya/liquid/tools"
 )
 
 // newHeadCmd
@@ -102,7 +103,7 @@ func newHeadCmd() *cobra.Command {
 }
 
 //SetHeaderLicense is add license header to files that do not have license header and change files' license header if the files already have license header.
-func SetHeaderLicense(inputPath string, l *License, author string, messageW io.Writer, LIsNotSet bool, config *Config) error {
+func SetHeaderLicense(inputPath string, l *tools.License, author string, messageW io.Writer, LIsNotSet bool, config *Config) error {
 
 	license := l
 	ii, err := os.Stat(inputPath)
@@ -111,9 +112,9 @@ func SetHeaderLicense(inputPath string, l *License, author string, messageW io.W
 	}
 	if LIsNotSet {
 		if ii.IsDir() {
-			license = GetDirLicense(inputPath)
+			license = tools.GetDirLicense(inputPath)
 		} else {
-			license = GetDirLicense(filepath.Dir(inputPath))
+			license = tools.GetDirLicense(filepath.Dir(inputPath))
 		}
 	}
 
@@ -147,7 +148,7 @@ func SetHeaderLicense(inputPath string, l *License, author string, messageW io.W
 }
 
 //SetFileHeader set file header to specified license.
-func SetFileHeader(fp string, fi os.FileInfo, l *License, author string) error {
+func SetFileHeader(fp string, fi os.FileInfo, l *tools.License, author string) error {
 	f, err := os.Open(fp)
 	if err != nil {
 		return err
@@ -196,14 +197,14 @@ func SetFileHeader(fp string, fi os.FileInfo, l *License, author string) error {
 					detecting = false
 				}
 			}
-			l.writeLicenseHeader(tmpw, author)
+			l.WriteLicenseHeader(tmpw, author)
 			if text != "" {
 				for sc.Scan() {
 					tmpw.WriteString(sc.Text())
 				}
 			}
 		} else {
-			l.writeLicenseHeader(tmpw, author)
+			l.WriteLicenseHeader(tmpw, author)
 			tmpw.WriteString(text)
 			for sc.Scan() {
 				tmpw.WriteString(sc.Text())
@@ -215,7 +216,7 @@ func SetFileHeader(fp string, fi os.FileInfo, l *License, author string) error {
 			ttext := strings.TrimPrefix(text, "/*")
 			ttext = strings.TrimSpace(ttext)
 			if strings.HasPrefix(ttext, "Copyright") {
-				l.writeLicenseHeader(tmpw, author)
+				l.WriteLicenseHeader(tmpw, author)
 				e := strings.Index(text, "*/")
 				tmpw.WriteString(text[e+2:])
 				for sc.Scan() {
@@ -240,12 +241,12 @@ func SetFileHeader(fp string, fi os.FileInfo, l *License, author string) error {
 			tcomment := strings.TrimPrefix(comment, "/*")
 			tcomment = strings.TrimSpace(tcomment)
 			if strings.HasPrefix(tcomment, "Copyright") {
-				l.writeLicenseHeader(tmpw, author)
+				l.WriteLicenseHeader(tmpw, author)
 				for sc.Scan() {
 					tmpw.WriteString(sc.Text())
 				}
 			} else {
-				l.writeLicenseHeader(tmpw, author)
+				l.WriteLicenseHeader(tmpw, author)
 				tmpw.WriteString(comment)
 				for sc.Scan() {
 					tmpw.WriteString(sc.Text())
@@ -254,7 +255,7 @@ func SetFileHeader(fp string, fi os.FileInfo, l *License, author string) error {
 		}
 
 	} else {
-		l.writeLicenseHeader(tmpw, author)
+		l.WriteLicenseHeader(tmpw, author)
 		tmpw.WriteString(text)
 		for sc.Scan() {
 			tmpw.WriteString(sc.Text())

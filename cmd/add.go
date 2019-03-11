@@ -27,6 +27,7 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
+	"github.com/suquiya/liquid/tools"
 )
 
 // newCmd represents the new command
@@ -54,15 +55,15 @@ func newAddCmd() *cobra.Command {
 	return addCmd
 }
 
-func createNew(fn string, l *License, author, packageName string, messageWriter io.Writer, LicenseIsNotSet bool, config *Config) {
-	isFilePath, err := IsFilePath(fn)
+func createNew(fn string, l *tools.License, author, packageName string, messageWriter io.Writer, LicenseIsNotSet bool, config *Config) {
+	isFilePath, err := tools.IsFilePath(fn)
 	//fmt.Fprintf(messageWriter, "l:H-[%s],T-[%s]\r\n", l.Header, l.Text)
 	if isFilePath {
 		fp, err := filepath.Abs(fn)
 		if err != nil {
 			panic(err)
 		}
-		isExist, err := IsExistFile(fp)
+		isExist, err := tools.IsExistFile(fp)
 		//fmt.Fprintf(messageWriter, "fp[%s]\r\n", fp)
 		if isExist {
 			fmt.Fprintf(messageWriter, "%s is exist. %s not created.\r\n", fp, fp)
@@ -87,7 +88,7 @@ func createNew(fn string, l *License, author, packageName string, messageWriter 
 		license := l
 		if isExistDir(dir) {
 			if LicenseIsNotSet && config.License["fix"] == "" {
-				ld := GetDirLicense(dir)
+				ld := tools.GetDirLicense(dir)
 				if ld != nil {
 					fmt.Printf("In %s, license file detected. License: %s", dir, ld.Name)
 					license = ld
@@ -109,7 +110,7 @@ func createNew(fn string, l *License, author, packageName string, messageWriter 
 		} else {
 			defer f.Close()
 			fmt.Fprintf(messageWriter, "begin create: %s\r\n", fp)
-			license.writeLicenseHeader(f, author)
+			license.WriteLicenseHeader(f, author)
 			fmt.Fprintln(f, "")
 			//fmt.Println("pn:[", pn, "]")
 			fmt.Fprintln(f, "package", pn)

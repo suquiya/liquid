@@ -27,9 +27,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/asaskevich/govalidator"
-
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/suquiya/liquid/tools"
 
 	"github.com/spf13/cobra"
 )
@@ -153,13 +152,13 @@ func newRootCmd() *cobra.Command {
 }
 
 //ProcessArg process args to get license,author and config data from arg and config file.
-func ProcessArg(cmd *cobra.Command, args []string) (*Config, *License, string, bool) {
+func ProcessArg(cmd *cobra.Command, args []string) (*Config, *tools.License, string, bool) {
 	configPath, err := cmd.Flags().GetString("config")
 	if err != nil {
 		panic(err)
 	}
 
-	if exist, _ := IsExistFilePath(configPath); !exist {
+	if exist, _ := tools.IsExistFilePath(configPath); !exist {
 		cmd.Println("config file not exist")
 		configPath = getDefaultConfigPath()
 	}
@@ -188,7 +187,7 @@ func ProcessArg(cmd *cobra.Command, args []string) (*Config, *License, string, b
 		licenseName, licenseIsNotSet = getLicenseName(l, config)
 	}
 
-	var license *License
+	var license *tools.License
 	if licenseName == "custom" {
 		h, err := cmd.Flags().GetString("Header")
 		if err != nil {
@@ -200,14 +199,14 @@ func ProcessArg(cmd *cobra.Command, args []string) (*Config, *License, string, b
 		}
 
 		headPath, textPath := getHeader(h, config), getText(t, config)
-		license, err = CreateCustomLicense(headPath, textPath)
+		license, err = tools.CreateCustomLicense(headPath, textPath)
 		if err != nil {
 			fmt.Println(err)
-			license = GetOSSLicense("mit")
+			license = tools.GetOSSLicense("mit")
 		}
 
 	} else {
-		license = GetOSSLicense(licenseName)
+		license = tools.GetOSSLicense(licenseName)
 	}
 	a, err := cmd.Flags().GetString("author")
 	if err != nil {
@@ -229,7 +228,7 @@ func ProcessArg(cmd *cobra.Command, args []string) (*Config, *License, string, b
 func WriteConfigFile(config *Config, configPath string) error {
 	perm := os.FileMode(0644)
 
-	if exist, _ := IsExistFile(configPath); exist {
+	if exist, _ := tools.IsExistFile(configPath); exist {
 		fi, err := os.Stat(configPath)
 		if err != nil {
 			return err
@@ -271,57 +270,6 @@ func getAuthor(a string, c *Config) string {
 		return c.GetAuthorValue()
 	}
 	return a
-}
-
-//IsExistFilePath is validate whether val is exist filepath or not.
-func IsExistFilePath(val string) (bool, error) {
-	absPath, err := filepath.Abs(val)
-	if err != nil {
-		return false, err
-	}
-	if is, _ := govalidator.IsFilePath(absPath); !is {
-		return is, fmt.Errorf("%s is not file path", val)
-	}
-
-	fi, err := os.Stat(val)
-	if err != nil {
-		return false, err
-	}
-
-	if fi.IsDir() {
-		return false, fmt.Errorf("%s is not file", val)
-	}
-
-	return true, err
-}
-
-//IsExistFile validate whether val is exist or not
-func IsExistFile(val string) (bool, error) {
-	fi, err := os.Stat(val)
-
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-
-	if fi.IsDir() {
-		return false, fmt.Errorf("%s is directory", val)
-	}
-
-	return true, err
-}
-
-//IsFilePath validate whether val is file path or not
-func IsFilePath(val string) (bool, error) {
-	absPath, err := filepath.Abs(val)
-	if err != nil {
-		return false, err
-	}
-
-	if is, _ := govalidator.IsFilePath(absPath); !is {
-		return is, fmt.Errorf("%s is not file path", val)
-	}
-
-	return true, nil
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

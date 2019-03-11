@@ -18,18 +18,20 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//Package cmd is inner package of liquid.
-package cmd
+//Package tools is inner tools package of liquid.
+package tools
 
 import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
 	"time"
 
+	"github.com/asaskevich/govalidator"
 	"github.com/spf13/cobra/cobra/cmd"
 )
 
@@ -108,7 +110,8 @@ func readFile(path string) string {
 	return string(b)
 }
 
-func (l *License) writeLicenseHeader(w io.Writer, author string) {
+//WriteLicenseHeader write license header to w
+func (l *License) WriteLicenseHeader(w io.Writer, author string) {
 	ct := getNowCopyrightText(author)
 	data := make(map[string]interface{})
 	data["copyright"] = ct
@@ -224,4 +227,55 @@ func findAndGetLicenseContent(dir string) []byte {
 	}
 
 	return b
+}
+
+//IsExistFilePath is validate whether val is exist filepath or not.
+func IsExistFilePath(val string) (bool, error) {
+	absPath, err := filepath.Abs(val)
+	if err != nil {
+		return false, err
+	}
+	if is, _ := govalidator.IsFilePath(absPath); !is {
+		return is, fmt.Errorf("%s is not file path", val)
+	}
+
+	fi, err := os.Stat(val)
+	if err != nil {
+		return false, err
+	}
+
+	if fi.IsDir() {
+		return false, fmt.Errorf("%s is not file", val)
+	}
+
+	return true, err
+}
+
+//IsExistFile validate whether val is exist or not
+func IsExistFile(val string) (bool, error) {
+	fi, err := os.Stat(val)
+
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+
+	if fi.IsDir() {
+		return false, fmt.Errorf("%s is directory", val)
+	}
+
+	return true, err
+}
+
+//IsFilePath validate whether val is file path or not
+func IsFilePath(val string) (bool, error) {
+	absPath, err := filepath.Abs(val)
+	if err != nil {
+		return false, err
+	}
+
+	if is, _ := govalidator.IsFilePath(absPath); !is {
+		return is, fmt.Errorf("%s is not file path", val)
+	}
+
+	return true, nil
 }
