@@ -159,11 +159,12 @@ func ProcessArg(cmd *cobra.Command, args []string) (*Config, *tools.License, str
 	}
 
 	if exist, _ := tools.IsExistFilePath(configPath); !exist {
-		cmd.Println("config file not exist")
 		configPath = getDefaultConfigPath()
 	}
 
+	cmd.Println("read configfile:", configPath)
 	config := ReadConfigFile(configPath)
+	cmd.Println("finish reading config file.")
 	if config == nil {
 		config = NewConfig()
 		config.SetDefValue()
